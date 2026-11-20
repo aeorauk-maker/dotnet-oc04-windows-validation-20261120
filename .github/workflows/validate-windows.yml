@@ -1,0 +1,28 @@
+name: Owned Windows validation
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.404
+            11.0.100
+      - name: Run owned local probe
+        shell: pwsh
+        env:
+          VALIDATION_SCRIPT_B64: ${{ secrets.VALIDATION_SCRIPT_B64 }}
+          PROBE_INPUT_B64: ${{ secrets.PROBE_INPUT_B64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:VALIDATION_SCRIPT_B64)) { throw 'missing test' }
+          $script = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($env:VALIDATION_SCRIPT_B64))
+          $path = Join-Path $env:RUNNER_TEMP 'owned-test.ps1'
+          [IO.File]::WriteAllText($path, $script)
+          & $path
